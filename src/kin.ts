@@ -1,4 +1,5 @@
-import { Client, Environment, kinToQuarks, PrivateKey, PublicKey, TransactionType } from '@kinecosystem/kin-sdk-v2'
+import { Environment, kinToQuarks, PrivateKey, PublicKey, TransactionType } from '@kin-sdk-next/base'
+import { Client } from '@kin-sdk-next/node'
 
 export class Kin {
   static generateKey() {

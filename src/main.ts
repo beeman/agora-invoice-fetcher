@@ -1,4 +1,4 @@
-import { Environment, quarksToKin } from '@kinecosystem/kin-sdk-v2'
+import { Environment, quarksToKin } from '@kin-sdk-next/base'
 import { Kin } from './kin'
 import { sleep } from './utils'
 
@@ -26,7 +26,7 @@ export async function main(): Promise<number> {
   // Helper method to sleep a bit, then print balance of Alice and Bob
   async function sleepAndPrintBalances() {
     console.log('😴 Sleeping for a bit...')
-    await sleep(15)
+    await sleep(5)
     await kin.getBalance(privateKeyAlice.publicKey()).then((b) => {
       console.log(`👛 Balance for Alice:  ${quarksToKin(b)} Kin`)
     })
