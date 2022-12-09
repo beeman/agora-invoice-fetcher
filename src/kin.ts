@@ -1,56 +1,50 @@
-import { Client, Environment, kinToQuarks, PrivateKey, PublicKey, TransactionType } from '@kinecosystem/kin-sdk-v2'
+import {
+  Client,
+  Environment,
+  TransactionData,
+  TransactionType,
+} from "@kinecosystem/kin-sdk-v2";
+import { decode, encode } from "bs58";
+
+// This method converts values of an Agora transaction + invoice into plain json
+function formatAgoraTransaction(tx: TransactionData) {
+  return {
+    txId: encode(tx.txId),
+    payments: tx.payments.map(
+      ({ sender, destination, quarks, type, invoice }) => ({
+        sender: sender.toBase58(),
+        destination: destination.toBase58(),
+        quarks,
+        type: TransactionType[type],
+        invoice: {
+          items: invoice?.Items?.map(({ title, description, amount, sku }) => ({
+            title,
+            amount: amount.toString(),
+            sku: sku ? encode(sku) : undefined,
+          })),
+        },
+      })
+    ),
+  };
+}
 
 export class Kin {
-  static generateKey() {
-    return PrivateKey.random()
-  }
-
-  readonly client: Client
+  readonly client: Client;
 
   constructor(env: Environment, appIndex?: number) {
-    this.client = new Client(env, { appIndex })
+    this.client = new Client(env, { appIndex });
   }
 
-  async createAccount(privateKey: PrivateKey): Promise<PublicKey[]> {
-    // Create Account
-    await this.client.createAccount(privateKey)
-    // Resolve Token Account
-    return this.client.resolveTokenAccounts(privateKey.publicKey())
-  }
+  async getTransactionDetails(signature: string) {
+    // Get the transaction from Agora
+    const tx = await this.client.getTransaction(decode(signature));
 
-  async getBalance(account: PublicKey) {
-    return this.client.getBalance(account)
-  }
-
-  async requestAirdrop(publicKey: PublicKey, amount: string) {
-    return this.client.requestAirdrop(publicKey, kinToQuarks(amount))
-  }
-
-  async submitPayment(
-    sender: PrivateKey,
-    destination: PublicKey,
-    amount: string,
-    type: TransactionType,
-    memo?: string,
-  ) {
-    return this.client.submitPayment({
-      sender,
-      destination,
-      type,
-      memo,
-      quarks: kinToQuarks(amount),
-    })
-  }
-
-  async submitEarn(sender: PrivateKey, destination: PublicKey, amount: string, memo?: string) {
-    return this.submitPayment(sender, destination, amount, TransactionType.Earn, memo)
-  }
-
-  async submitSpend(sender: PrivateKey, destination: PublicKey, amount: string, memo?: string) {
-    return this.submitPayment(sender, destination, amount, TransactionType.Spend, memo)
-  }
-
-  async submitP2P(sender: PrivateKey, destination: PublicKey, amount: string, memo?: string) {
-    return this.submitPayment(sender, destination, amount, TransactionType.P2P, memo)
+    if (tx) {
+      // Format the transaction
+      return formatAgoraTransaction(tx);
+    } else {
+      console.log(`No transaction found with id ${signature}`);
+      return null;
+    }
   }
 }

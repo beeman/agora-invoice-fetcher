@@ -19,6 +19,9 @@
     "typescript": "^4.3.4"
   },
   "dependencies": {
+    "@kin-kinetic/keypair": "^1.0.0-rc.9",
+    "@kin-kinetic/sdk": "^1.0.0-rc.9",
+    "@kin-kinetic/solana": "^1.0.0-rc.9",
     "@kinecosystem/agora-api": "^0.26.1"
   }
 }

@@ -1,55 +1,42 @@
-import { Environment, quarksToKin } from '@kinecosystem/kin-sdk-v2'
-import { Kin } from './kin'
-import { sleep } from './utils'
+import { Solana } from "@kin-kinetic/solana";
+import { Environment } from "@kinecosystem/kin-sdk-v2";
+import { Kin } from "./kin";
 
 export async function main(): Promise<number> {
-  // Set up Kin client
-  const kin = new Kin(Environment.Test)
+  // We set up the Kin client to fetch transactions and invoices Agora
+  const kin = new Kin(Environment.Prod);
 
-  // Prepare tokens for Alice and Bob
-  const privateKeyAlice = Kin.generateKey()
-  const tokenAccountsAlice = await kin.createAccount(privateKeyAlice)
+  // We set up the Solana client to fetch the latest transactions from the target wallet
+  const solana = new Solana("mainnet-beta");
 
-  console.log(`🔑 Public Key Alice    ${privateKeyAlice.publicKey().toBase58()}`)
-  for (const tokenAccount of tokenAccountsAlice) {
-    console.log(`🗝  Token Account Alice ${tokenAccount.toBase58()}`)
+  // Replace this with another wallet to get their transaction history
+  const TARGET_WALLET = "5WuYxq75GcEv7YUwWrUR7HayZgqgDyjsrVNz5LJuEG1d";
+
+  // In this example we use the Solana connecting directly to get the latest transactions from the target wallet
+  const signatures: string[] = await solana
+    .getTokenAccountsHistory([TARGET_WALLET])
+    .then((res) => {
+      // FIXME: there might be multiple token accounts here!
+      // In this example, we just use the first one
+      return res[0].history.map((tx: any) => {
+        return tx.signature;
+      });
+    });
+
+  // Look over the transactions and fetch the Agora data
+  // NOTE: we slice 10 because we are just interested in a few transactions
+  for (const signature of signatures.slice(0, 10)) {
+    console.log(`Getting transaction details for ${signature}`);
+    // Get the Agora transaction details for this signature
+    const formatted = await kin.getTransactionDetails(signature);
+    // Show result or error
+    if (formatted) {
+      console.log(JSON.stringify(formatted, null, 2));
+    } else {
+      console.error(`No transaction found for signature ${signature}`);
+    }
   }
 
-  const privateKeyBob = Kin.generateKey()
-  const tokenAccountsBob = await kin.createAccount(privateKeyBob)
-
-  console.log(`🔑 Public Key Bob      ${privateKeyBob.publicKey().toBase58()}`)
-  for (const tokenAccount of tokenAccountsBob) {
-    console.log(`🗝  Token Account Bob   ${tokenAccount.toBase58()}`)
-  }
-
-  // Helper method to sleep a bit, then print balance of Alice and Bob
-  async function sleepAndPrintBalances() {
-    console.log('😴 Sleeping for a bit...')
-    await sleep(15)
-    await kin.getBalance(privateKeyAlice.publicKey()).then((b) => {
-      console.log(`👛 Balance for Alice:  ${quarksToKin(b)} Kin`)
-    })
-    await kin.getBalance(privateKeyBob.publicKey()).then((b) => {
-      console.log(`👛 Balance for Bob:    ${quarksToKin(b)} Kin`)
-    })
-  }
-
-  await sleepAndPrintBalances()
-
-  console.log('🙏 Request Airdrop for Alice')
-  await kin.requestAirdrop(tokenAccountsAlice[0], '10')
-
-  console.log('🙏 Request Airdrop for Bob')
-  await kin.requestAirdrop(tokenAccountsBob[0], '10')
-
-  await sleepAndPrintBalances()
-
-  console.log('💸 Submit P2P Payment from Alice to Bob')
-  await kin.submitP2P(privateKeyAlice, privateKeyBob.publicKey(), '2', 'My demo payment')
-
-  await sleepAndPrintBalances()
-
-  console.log('✅ Done!')
-  return 0
+  console.log("✅ Done!");
+  return 0;
 }
